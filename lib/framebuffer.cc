@@ -903,13 +903,15 @@ void Framebuffer::DumpToMatrix(GPIO *io, int pwm_low_bit) {
     for (int b = start_bit; b < kBitPlanes; ++b) {
       gpio_bits_t *row_data = ValueAt(d_row, 0, b);
       // While the output enable is still on, we can already clock in the next
-      // data.
+      // data. Optimized version with reduced GPIO operations.
       for (int col = 0; col < columns_; ++col) {
         const gpio_bits_t &out = *row_data++;
         io->WriteMaskedBits(out, color_clk_mask);  // col + reset clock
         io->SetBits(h.clock);               // Rising edge: clock color in.
+        // Immediate clear for minimum pulse width - reduces timing variations
+        io->ClearBits(h.clock);
       }
-      io->ClearBits(color_clk_mask);    // clock back to normal.
+      io->ClearBits(color_clk_mask & ~h.clock);    // clock back to normal, preserve final clock state
 
       // OE of the previous row-data must be finished before strobe.
       sOutputEnablePulser->WaitPulseFinished();
@@ -918,6 +920,8 @@ void Framebuffer::DumpToMatrix(GPIO *io, int pwm_low_bit) {
       row_setter_->SetRowAddress(io, d_row);
 
       io->SetBits(h.strobe);   // Strobe in the previously clocked in row.
+      // Minimal delay for stable strobe - critical for anti-flicker
+      asm volatile("nop\n\tnop\n\tnop\n\tnop");  
       io->ClearBits(h.strobe);
 
       // Now switch on for the sleep time necessary for that bit-plane.

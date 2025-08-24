@@ -200,12 +200,16 @@ public:
 
       if (target_frame_usec_) {
         if (allow_busy_waiting_) {
-          while ((GetMicrosecondCounter() - start_time_us) < target_frame_usec_) {
-            // busy wait. We have our dedicated core, so ok to burn cycles.
+          // Optimized busy wait - yield CPU slightly to reduce system load while maintaining timing
+          const uint32_t target_time = start_time_us + target_frame_usec_;
+          while (GetMicrosecondCounter() < target_time) {
+            asm volatile("yield");  // ARM hint for power efficiency
           }
         } else {
           long spent_us = GetMicrosecondCounter() - start_time_us;
-          SleepMicroseconds(target_frame_usec_ - spent_us);
+          if (spent_us < target_frame_usec_) {
+            SleepMicroseconds(target_frame_usec_ - spent_us);
+          }
         }
       }
 
