@@ -282,6 +282,44 @@ struct HardwareMapping matrix_hardware_mappings[] = {
     .p5_b2         = GPIO_BIT(45),
   },
 #endif
+  {
+    .name          = "ss-displayboard",
 
+    /* This GPIO mapping is made for the ss-displayboard RPi Hat
+    */
+    .output_enable = GPIO_BIT(18),
+    .clock         = GPIO_BIT(6),
+    .strobe        = GPIO_BIT(13),
+
+    .a             = GPIO_BIT(11),
+    .b             = GPIO_BIT(12),
+    .c             = GPIO_BIT(7),
+    .d             = GPIO_BIT(8),
+    .e             = GPIO_BIT(20),  /* RxD kept free unless 1:64 */
+
+    /* Chain 0 */
+    .p0_r1         = GPIO_BIT(22),
+    .p0_g1         = GPIO_BIT(5),
+    .p0_b1         = GPIO_BIT(24),
+    .p0_r2         = GPIO_BIT(25),
+    .p0_g2         = GPIO_BIT(10),
+    .p0_b2         = GPIO_BIT(9),
+
+    /* Chain 1 */
+    .p1_r1         = GPIO_BIT(23),
+    .p1_g1         = GPIO_BIT(27),
+    .p1_b1         = GPIO_BIT(17),
+    .p1_r2         = GPIO_BIT(3),
+    .p1_g2         = GPIO_BIT(4),
+    .p1_b2         = GPIO_BIT(15),
+
+    /* Chain 2 */
+    .p2_r1         = GPIO_BIT(21),
+    .p2_g1         = GPIO_BIT(26),
+    .p2_b1         = GPIO_BIT(19),
+    .p2_r2         = GPIO_BIT(2),
+    .p2_g2         = GPIO_BIT(16),
+    .p2_b2         = GPIO_BIT(14),
+  },
   {0}
 };
