@@ -85,9 +85,8 @@ private:
         return;
     }
 #endif
-    // Optimized timing: use CPU nops instead of memory writes for better consistency
     for (int n = 0; n < slowdown_; n++) {
-      asm volatile("nop");
+      *gpio_clr_bits_low_ = 0;
     }
   }
 

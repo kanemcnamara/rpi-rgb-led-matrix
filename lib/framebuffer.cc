@@ -26,6 +26,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/syscall.h>
+#include <sched.h>
 
 #include <algorithm>
 
@@ -859,6 +861,15 @@ void Framebuffer::CopyFrom(const Framebuffer *other) {
 }
 
 void Framebuffer::DumpToMatrix(GPIO *io, int pwm_low_bit) {
+  // Critical timing section: maximize priority and minimize interruptions
+  static bool timing_optimized = false;
+  if (!timing_optimized) {
+    // One-time optimization setup
+    struct sched_param param = {.sched_priority = 99};
+    sched_setscheduler(0, SCHED_FIFO, &param);
+    timing_optimized = true;
+  }
+  
   const struct HardwareMapping &h = *hardware_mapping_;
   gpio_bits_t color_clk_mask = 0;  // Mask of bits while clocking in.
   color_clk_mask |= h.p0_r1 | h.p0_g1 | h.p0_b1 | h.p0_r2 | h.p0_g2 | h.p0_b2;
@@ -903,15 +914,13 @@ void Framebuffer::DumpToMatrix(GPIO *io, int pwm_low_bit) {
     for (int b = start_bit; b < kBitPlanes; ++b) {
       gpio_bits_t *row_data = ValueAt(d_row, 0, b);
       // While the output enable is still on, we can already clock in the next
-      // data. Optimized version with reduced GPIO operations.
+      // data.
       for (int col = 0; col < columns_; ++col) {
         const gpio_bits_t &out = *row_data++;
         io->WriteMaskedBits(out, color_clk_mask);  // col + reset clock
         io->SetBits(h.clock);               // Rising edge: clock color in.
-        // Immediate clear for minimum pulse width - reduces timing variations
-        io->ClearBits(h.clock);
       }
-      io->ClearBits(color_clk_mask & ~h.clock);    // clock back to normal, preserve final clock state
+      io->ClearBits(color_clk_mask);    // clock back to normal.
 
       // OE of the previous row-data must be finished before strobe.
       sOutputEnablePulser->WaitPulseFinished();

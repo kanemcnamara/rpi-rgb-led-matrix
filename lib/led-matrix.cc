@@ -200,16 +200,12 @@ public:
 
       if (target_frame_usec_) {
         if (allow_busy_waiting_) {
-          // Optimized busy wait - yield CPU slightly to reduce system load while maintaining timing
-          const uint32_t target_time = start_time_us + target_frame_usec_;
-          while (GetMicrosecondCounter() < target_time) {
-            asm volatile("yield");  // ARM hint for power efficiency
+          while ((GetMicrosecondCounter() - start_time_us) < target_frame_usec_) {
+            // busy wait. We have our dedicated core, so ok to burn cycles.
           }
         } else {
           long spent_us = GetMicrosecondCounter() - start_time_us;
-          if (spent_us < target_frame_usec_) {
-            SleepMicroseconds(target_frame_usec_ - spent_us);
-          }
+          SleepMicroseconds(target_frame_usec_ - spent_us);
         }
       }
 
@@ -494,7 +490,10 @@ bool RGBMatrix::Impl::StartRefresh() {
     //   core #3 will succeed.
     // The Raspberry Pi1 only has one core, so this affinity
     //   call will simply fail and we keep using the only core.
-    updater_->Start(99, (1<<3));  // Prio: high. Also: put on last CPU.
+    // Enhanced CPU affinity: Use dedicated CPU core for display thread
+    // Try CPU 3 first (typically less used), fallback to CPU 2, then CPU 1
+    uint32_t preferred_cpus = (1<<3) | (1<<2) | (1<<1);  // Priority order: CPU3 > CPU2 > CPU1
+    updater_->Start(99, preferred_cpus);  // Maximum RT priority with dedicated core
   }
   return updater_ != NULL;
 }

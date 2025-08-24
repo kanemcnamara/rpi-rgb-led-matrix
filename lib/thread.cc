@@ -50,7 +50,9 @@ void Thread::Start(int priority, uint32_t affinity_mask) {
   if (priority > 0) {
     struct sched_param p;
     p.sched_priority = priority;
-    if ((err = pthread_setschedparam(thread_, SCHED_FIFO, &p))) {
+    // Use SCHED_FIFO for highest priority real-time scheduling
+    int sched_policy = SCHED_FIFO;
+    if ((err = pthread_setschedparam(thread_, sched_policy, &p))) {
       char buffer[PATH_MAX];
       const char *bin = realpath("/proc/self/exe", buffer);  // Linux specific.
       fprintf(stderr, "Can't set realtime thread priority=%d: %s.\n"

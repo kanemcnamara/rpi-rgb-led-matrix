@@ -58,7 +58,14 @@ private:
 // Non-recursive Mutex.
 class Mutex {
 public:
-  Mutex() { pthread_mutex_init(&mutex_, NULL); }
+  Mutex() { 
+    // Enable priority inheritance to prevent priority inversion
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+    pthread_mutex_init(&mutex_, &attr);
+    pthread_mutexattr_destroy(&attr);
+  }
   ~Mutex() { pthread_mutex_destroy(&mutex_); }
   void Lock() { pthread_mutex_lock(&mutex_); }
   void Unlock() { pthread_mutex_unlock(&mutex_); }
