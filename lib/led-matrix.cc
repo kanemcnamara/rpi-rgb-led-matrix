@@ -490,10 +490,10 @@ bool RGBMatrix::Impl::StartRefresh() {
     //   core #3 will succeed.
     // The Raspberry Pi1 only has one core, so this affinity
     //   call will simply fail and we keep using the only core.
-    // Enhanced CPU affinity: Use dedicated CPU core for display thread
-    // Try CPU 3 first (typically less used), fallback to CPU 2, then CPU 1
-    uint32_t preferred_cpus = (1<<3) | (1<<2) | (1<<1);  // Priority order: CPU3 > CPU2 > CPU1
-    updater_->Start(99, preferred_cpus);  // Maximum RT priority with dedicated core
+    // Pin to core 3 only: an affinity mask is a set, not a priority order, so
+    // allowing several cores lets the kernel migrate the thread between them.
+    // Pair with isolcpus=3 so nothing else is scheduled on that core.
+    updater_->Start(99, (1<<3));  // Maximum RT priority with dedicated core
   }
   return updater_ != NULL;
 }
